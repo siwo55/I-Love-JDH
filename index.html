@@ -156,7 +156,7 @@
 
             // Move hearts
             hearts.forEach((heart, index) => {
-                heart.y += heart.speed;
+                heart.y += heart.speed * speedMultiplier;
 
                 // Check for collision with player
                 if (
@@ -175,10 +175,8 @@
                     if (survivalMode) {
                 let speedMultiplier = 1;
                 survivalSpeedInterval = setInterval(() => {
-                    speedMultiplier += 0.5; // Increase multiplier every 10 seconds
-                    hearts.forEach(heart => {
-                        heart.speed *= 1 + 0.5; // Adjust speed of existing hearts
-                    });
+                    speedMultiplier += 0.5; // Increment multiplier every 10 seconds
+                }, 10000);
                 }, 10000);
             }, 10000);
             } else {
