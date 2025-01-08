@@ -40,11 +40,11 @@
 <body>
     <canvas id="gameCanvas" style="display:none;"></canvas>
     <div id="modeSelection">
-        <button onclick="startGame('survival')">Survival Mode</button>
-        <button onclick="startGame('timed')">Timed Mode</button>
+        <button id="survivalMode">Survival Mode</button>
+        <button id="timedMode">Timed Mode</button>
     </div>
-    <button id="restartButton" onclick="restartGame()">Restart</button>
-    <button id="homeButton" onclick="returnHome()">Main Menu</button>
+    <button id="restartButton">Restart</button>
+    <button id="homeButton">Main Menu</button>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
@@ -57,6 +57,8 @@
         const restartButton = document.getElementById('restartButton');
         const homeButton = document.getElementById('homeButton');
         const modeSelection = document.getElementById('modeSelection');
+        const survivalModeButton = document.getElementById('survivalMode');
+        const timedModeButton = document.getElementById('timedMode');
 
         // 禁止默认触摸长按行为
         document.addEventListener('touchstart', (e) => {
@@ -80,6 +82,7 @@
         let survivalMode = true;
         let gameTime = 30; // 30 seconds for timed mode
         let timerInterval;
+        let heartSpawnInterval;
         let isTouchingLeft = false;
         let isTouchingRight = false;
 
@@ -200,6 +203,7 @@
                 restartButton.style.display = 'block';
                 homeButton.style.display = 'block';
                 clearInterval(timerInterval);
+                clearInterval(heartSpawnInterval);
                 return;
             }
 
@@ -216,6 +220,10 @@
             hearts = [];
             gameOver = false;
             gameTime = 30;
+
+            clearInterval(timerInterval);
+            clearInterval(heartSpawnInterval);
+
             if (!survivalMode) {
                 timerInterval = setInterval(() => {
                     gameTime -= 1;
@@ -224,7 +232,8 @@
                     }
                 }, 1000);
             }
-            setInterval(spawnHeart, 1000);
+
+            heartSpawnInterval = setInterval(spawnHeart, 1000);
             gameLoop();
         }
 
@@ -247,7 +256,13 @@
             homeButton.style.display = 'none';
             modeSelection.style.display = 'block';
             canvas.style.display = 'none';
+            clearInterval(timerInterval);
+            clearInterval(heartSpawnInterval);
         }
+
+        // Event listeners for mode selection
+        survivalModeButton.addEventListener('click', () => startGame('survival'));
+        timedModeButton.addEventListener('click', () => startGame('timed'));
     </script>
 </body>
 </html>
