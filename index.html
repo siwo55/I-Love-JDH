@@ -219,7 +219,7 @@
             score = 0;
             hearts = [];
             gameOver = false;
-            gameTime = 30;
+            gameTime = survivalMode ? 30 : 25;
 
             clearInterval(timerInterval);
             clearInterval(heartSpawnInterval);
