@@ -86,8 +86,7 @@
         let timerInterval;
         let heartSpawnInterval;
         let survivalSpeedInterval;
-        let isTouchingLeft = false;
-        let isTouchingRight = false;
+        let speedMultiplier = 1;
 
         const heartSizes = [20, 40, 60];
 
@@ -95,70 +94,66 @@
         canvas.addEventListener('touchstart', (e) => {
             const touchX = e.touches[0].clientX;
             if (touchX < canvas.width / 2) {
-                isTouchingLeft = true;
+                player.x -= player.speed;
+                if (player.x < 0) player.x = 0;
             } else {
-                isTouchingRight = true;
+                player.x += player.speed;
+                if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
             }
-        });
-
-        canvas.addEventListener('touchend', (e) => {
-            isTouchingLeft = false;
-            isTouchingRight = false;
         });
 
         // Function to spawn hearts
         function spawnHeart() {
             const sizeIndex = Math.floor(Math.random() * 3);
             const size = heartSizes[sizeIndex];
-            const value = sizeIndex + 1;
-
             hearts.push({
                 x: Math.random() * (canvas.width - size),
                 y: -size,
-                speed: Math.random() * 3 + 2,
+                speed: Math.random() * 2 + 2,
                 size: size,
-                value: value,
+                value: sizeIndex + 1,
                 image: new Image()
             });
             hearts[hearts.length - 1].image.src = 'https://i.postimg.cc/NFWVW3kN/jdh-love.png';
         }
 
-        // Function to draw the player
-        function drawPlayer() {
-            ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
+        function startGame(mode) {
+            modeSelection.style.display = 'none';
+            canvas.style.display = 'block';
+            survivalMode = mode === 'survival';
+            score = 0;
+            hearts = [];
+            gameOver = false;
+            gameTime = 25;
+            speedMultiplier = 1;
+
+            clearAllIntervals();
+
+            if (survivalMode) {
+                survivalSpeedInterval = setInterval(() => {
+                    speedMultiplier += 0.1; // Increase speed multiplier gradually
+                }, 10000);
+            } else {
+                timerInterval = setInterval(() => {
+                    gameTime -= 1;
+                    if (gameTime <= 0) gameOver = true;
+                }, 1000);
+            }
+
+            heartSpawnInterval = setInterval(spawnHeart, 1000);
+            gameLoop();
         }
 
-        // Function to draw hearts
-        function drawHearts() {
-            hearts.forEach(heart => {
-                ctx.drawImage(heart.image, heart.x, heart.y, heart.size, heart.size);
-            });
+        function clearAllIntervals() {
+            clearInterval(timerInterval);
+            clearInterval(heartSpawnInterval);
+            clearInterval(survivalSpeedInterval);
         }
 
-        // Function to update game objects
         function update() {
-            if (!survivalMode) {
-                gameTime -= 1 / 60;
-                if (gameTime <= 0) {
-                    gameOver = true;
-                }
-            }
-
-            // Move player continuously if touching
-            if (isTouchingLeft) {
-                player.x -= player.speed;
-                if (player.x < 0) player.x = 0;
-            }
-            if (isTouchingRight) {
-                player.x += player.speed;
-                if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
-            }
-
-            // Move hearts
             hearts.forEach((heart, index) => {
                 heart.y += heart.speed * speedMultiplier;
 
-                // Check for collision with player
                 if (
                     heart.x < player.x + player.width &&
                     heart.x + heart.size > player.x &&
@@ -169,49 +164,54 @@
                     score += heart.value;
                 }
 
-                // Remove hearts that fall off screen
                 if (heart.y > canvas.height) {
                     hearts.splice(index, 1);
-                    if (survivalMode) {
-                let speedMultiplier = 1;
-                survivalSpeedInterval = setInterval(() => {
-                    speedMultiplier += 0.5; // Increment multiplier every 10 seconds
-                }, 10000);
-                }, 10000);
-            }, 10000);
-            } else {
-                timerInterval = setInterval(() => {
-                    gameTime -= 1;
-                    if (gameTime <= 0) {
-                        gameOver = true;
-                    }
-                }, 1000);
+                    if (survivalMode) gameOver = true;
+                }
+            });
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#000';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${score}`, 10, 30);
+            if (!survivalMode) ctx.fillText(`Time: ${Math.max(gameTime.toFixed(1), 0)}s`, 10, 60);
+
+            ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
+            hearts.forEach(heart => {
+                ctx.drawImage(heart.image, heart.x, heart.y, heart.size, heart.size);
+            });
+        }
+
+        function gameLoop() {
+            if (gameOver) {
+                ctx.fillStyle = '#000';
+                ctx.font = '40px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2);
+                ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 50);
+                restartButton.style.display = 'block';
+                homeButton.style.display = 'block';
+                clearAllIntervals();
+                return;
             }
 
-            heartSpawnInterval = setInterval(spawnHeart, 1000);
-            gameLoop();
+            update();
+            render();
+            requestAnimationFrame(gameLoop);
         }
 
         function restartGame() {
-            score = 0;
-            hearts = [];
-            gameOver = false;
             restartButton.style.display = 'none';
             homeButton.style.display = 'none';
             startGame(survivalMode ? 'survival' : 'timed');
         }
 
         function returnHome() {
-            score = 0;
-            hearts = [];
-            gameOver = false;
-            restartButton.style.display = 'none';
-            homeButton.style.display = 'none';
+            clearAllIntervals();
             modeSelection.style.display = 'block';
             canvas.style.display = 'none';
-            clearInterval(timerInterval);
-            clearInterval(heartSpawnInterval);
-            clearInterval(survivalSpeedInterval);
         }
 
         function bindButtonEvents(button, callback) {
@@ -222,7 +222,6 @@
             }, { passive: false });
         }
 
-        // Bind events for buttons
         bindButtonEvents(restartButton, restartGame);
         bindButtonEvents(homeButton, returnHome);
         bindButtonEvents(survivalModeButton, () => startGame('survival'));
