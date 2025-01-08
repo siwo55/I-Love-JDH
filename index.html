@@ -201,6 +201,7 @@
                 ctx.font = '40px Arial';
                 ctx.textAlign = 'center';
                 ctx.fillText('Game Over!', canvas.width / 2, canvas.height / 2);
+                clearInterval(survivalSpeedInterval);
                 ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 50);
                 restartButton.style.display = 'block';
                 homeButton.style.display = 'block';
@@ -236,6 +237,14 @@
             }
 
             heartSpawnInterval = setInterval(spawnHeart, 1000);
+            let survivalSpeedInterval;
+            if (survivalMode) {
+                survivalSpeedInterval = setInterval(() => {
+                    hearts.forEach(heart => {
+                        heart.speed *= 2;
+                    });
+                }, 10000);
+            }
             gameLoop();
         }
 
@@ -263,6 +272,17 @@
         }
 
         // Event listeners for mode selection
+    function bindButtonEvents(button, callback) {
+        button.addEventListener('click', callback);
+        button.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevents unwanted touch behavior
+            callback();
+        }, { passive: false });
+    }
+
+    // Bind events for restart and home buttons
+    bindButtonEvents(restartButton, restartGame);
+    bindButtonEvents(homeButton, returnHome);
         survivalModeButton.addEventListener('click', () => startGame('survival'));
         timedModeButton.addEventListener('click', () => startGame('timed'));
     </script>
