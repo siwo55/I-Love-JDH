@@ -60,7 +60,7 @@
         const survivalModeButton = document.getElementById('survivalMode');
         const timedModeButton = document.getElementById('timedMode');
 
-        // 禁止默认触摸长按行为，但排除按钮点击
+        // 禁止默认触摸长按行为，但不影响按钮
         document.addEventListener('touchstart', (e) => {
             if (!e.target.closest('button')) {
                 e.preventDefault();
