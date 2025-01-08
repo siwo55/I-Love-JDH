@@ -87,20 +87,36 @@
         let heartSpawnInterval;
         let survivalSpeedInterval;
         let speedMultiplier = 1;
+        let isMovingLeft = false;
+        let isMovingRight = false;
 
         const heartSizes = [20, 40, 60];
 
-        // Touch controls for mobile
+        // Touch controls for mobile (continuous movement)
         canvas.addEventListener('touchstart', (e) => {
             const touchX = e.touches[0].clientX;
             if (touchX < canvas.width / 2) {
+                isMovingLeft = true;
+            } else {
+                isMovingRight = true;
+            }
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            isMovingLeft = false;
+            isMovingRight = false;
+        });
+
+        function updatePlayerPosition() {
+            if (isMovingLeft) {
                 player.x -= player.speed;
                 if (player.x < 0) player.x = 0;
-            } else {
+            }
+            if (isMovingRight) {
                 player.x += player.speed;
                 if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
             }
-        });
+        }
 
         // Function to spawn hearts
         function spawnHeart() {
@@ -151,6 +167,8 @@
         }
 
         function update() {
+            updatePlayerPosition();
+
             hearts.forEach((heart, index) => {
                 heart.y += heart.speed * speedMultiplier;
 
