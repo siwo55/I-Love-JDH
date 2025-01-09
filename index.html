@@ -28,7 +28,6 @@
             border: none;
             cursor: pointer;
             border-radius: 5px;
-            z-index: 10;
         }
         #restartButton, #homeButton {
             display: none;
@@ -47,9 +46,6 @@
     <button id="restartButton">Restart</button>
     <button id="homeButton">Main Menu</button>
 
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"></script>
-
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -63,41 +59,6 @@
         const modeSelection = document.getElementById('modeSelection');
         const survivalModeButton = document.getElementById('survivalMode');
         const timedModeButton = document.getElementById('timedMode');
-
-        // Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyA...your-api-key...",
-            authDomain: "your-project-id.firebaseapp.com",
-            databaseURL: "https://your-database-name.firebaseio.com",
-            projectId: "your-project-id",
-            storageBucket: "your-project-id.appspot.com",
-            messagingSenderId: "your-sender-id",
-            appId: "your-app-id"
-        };
-
-        // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
-        let highestScore = 0;
-
-        // Fetch the highest score from the database
-        function fetchHighestScore() {
-            const scoreRef = database.ref('highestScore');
-            scoreRef.on('value', (snapshot) => {
-                highestScore = snapshot.val() || 0;
-            });
-        }
-
-        // Update the highest score in the database
-        function updateHighestScore(newScore) {
-            if (newScore > highestScore) {
-                database.ref('highestScore').set(newScore);
-            }
-        }
-
-        // Call fetchHighestScore on page load
-        fetchHighestScore();
 
         // 禁止默认触摸长按行为，但不影响按钮
         document.addEventListener('touchstart', (e) => {
@@ -175,8 +136,6 @@
         function startGame(mode) {
             modeSelection.style.display = 'none';
             canvas.style.display = 'block';
-            restartButton.style.display = 'none';
-            homeButton.style.display = 'none';
             survivalMode = mode === 'survival';
             score = 0;
             hearts = [];
@@ -235,8 +194,7 @@
             ctx.fillStyle = '#000';
             ctx.font = '20px Arial';
             ctx.fillText(`Score: ${score}`, 10, 30);
-            ctx.fillText(`Highest Score: ${highestScore}`, 10, 60); // 显示最高分
-            if (!survivalMode) ctx.fillText(`Time: ${Math.max(gameTime.toFixed(1), 0)}s`, 10, 90);
+            if (!survivalMode) ctx.fillText(`Time: ${Math.max(gameTime.toFixed(1), 0)}s`, 10, 60);
 
             ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
             hearts.forEach(heart => {
@@ -253,10 +211,6 @@
                 ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 50);
                 restartButton.style.display = 'block';
                 homeButton.style.display = 'block';
-
-                // Update highest score if current score is greater
-                updateHighestScore(score);
-
                 clearAllIntervals();
                 return;
             }
