@@ -28,6 +28,7 @@
             border: none;
             cursor: pointer;
             border-radius: 5px;
+            z-index: 10;
         }
         #restartButton, #homeButton {
             display: none;
@@ -46,6 +47,9 @@
     <button id="restartButton">Restart</button>
     <button id="homeButton">Main Menu</button>
 
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js"></script>
+
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
@@ -59,6 +63,41 @@
         const modeSelection = document.getElementById('modeSelection');
         const survivalModeButton = document.getElementById('survivalMode');
         const timedModeButton = document.getElementById('timedMode');
+
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyA...your-api-key...",
+            authDomain: "your-project-id.firebaseapp.com",
+            databaseURL: "https://your-database-name.firebaseio.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project-id.appspot.com",
+            messagingSenderId: "your-sender-id",
+            appId: "your-app-id"
+        };
+
+        // Initialize Firebase
+        const app = firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let highestScore = 0;
+
+        // Fetch the highest score from the database
+        function fetchHighestScore() {
+            const scoreRef = database.ref('highestScore');
+            scoreRef.on('value', (snapshot) => {
+                highestScore = snapshot.val() || 0;
+            });
+        }
+
+        // Update the highest score in the database
+        function updateHighestScore(newScore) {
+            if (newScore > highestScore) {
+                database.ref('highestScore').set(newScore);
+            }
+        }
+
+        // Call fetchHighestScore on page load
+        fetchHighestScore();
 
         // 禁止默认触摸长按行为，但不影响按钮
         document.addEventListener('touchstart', (e) => {
@@ -86,55 +125,58 @@
         let timerInterval;
         let heartSpawnInterval;
         let survivalSpeedInterval;
-        let isTouchingLeft = false;
-        let isTouchingRight = false;
         let speedMultiplier = 1;
+        let isMovingLeft = false;
+        let isMovingRight = false;
 
         const heartSizes = [20, 40, 60];
 
-        // Touch controls for mobile
+        // Touch controls for mobile (continuous movement)
         canvas.addEventListener('touchstart', (e) => {
             const touchX = e.touches[0].clientX;
             if (touchX < canvas.width / 2) {
-                isTouchingLeft = true;
-                player.x -= player.speed;
-                if (player.x < 0) player.x = 0;
+                isMovingLeft = true;
             } else {
-                isTouchingRight = true;
-                player.x += player.speed;
-                if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+                isMovingRight = true;
             }
         });
 
         canvas.addEventListener('touchend', (e) => {
-            isTouchingLeft = false;
-            isTouchingRight = false;
+            isMovingLeft = false;
+            isMovingRight = false;
         });
+
+        function updatePlayerPosition() {
+            if (isMovingLeft) {
+                player.x -= player.speed;
+                if (player.x < 0) player.x = 0;
+            }
+            if (isMovingRight) {
+                player.x += player.speed;
+                if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+            }
+        }
+
         // Function to spawn hearts
         function spawnHeart() {
             const sizeIndex = Math.floor(Math.random() * 3);
             const size = heartSizes[sizeIndex];
-            const value = sizeIndex + 1;
             hearts.push({
                 x: Math.random() * (canvas.width - size),
                 y: -size,
-                speed: Math.random() * 3 + 2,
                 speed: Math.random() * 2 + 2,
                 size: size,
-                value: value,
                 value: sizeIndex + 1,
                 image: new Image()
             });
             hearts[hearts.length - 1].image.src = 'https://i.postimg.cc/NFWVW3kN/jdh-love.png';
         }
 
-        // Function to draw the player
-        function drawPlayer() {
-            ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
-        }
         function startGame(mode) {
             modeSelection.style.display = 'none';
             canvas.style.display = 'block';
+            restartButton.style.display = 'none';
+            homeButton.style.display = 'none';
             survivalMode = mode === 'survival';
             score = 0;
             hearts = [];
@@ -142,21 +184,8 @@
             gameTime = 25;
             speedMultiplier = 1;
 
-        // Function to draw hearts
-        function drawHearts() {
-            hearts.forEach(heart => {
-                ctx.drawImage(heart.image, heart.x, heart.y, heart.size, heart.size);
-            });
-        }
             clearAllIntervals();
 
-        // Function to update game objects
-        function update() {
-            if (!survivalMode) {
-                gameTime -= 1 / 60;
-                if (gameTime <= 0) {
-                    gameOver = true;
-                }
             if (survivalMode) {
                 survivalSpeedInterval = setInterval(() => {
                     speedMultiplier += 0.1; // Increase speed multiplier gradually
@@ -168,30 +197,22 @@
                 }, 1000);
             }
 
-            // Move player continuously if touching
-            if (isTouchingLeft) {
-                player.x -= player.speed;
-                if (player.x < 0) player.x = 0;
-            }
-            if (isTouchingRight) {
-                player.x += player.speed;
-                if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
-            }
             heartSpawnInterval = setInterval(spawnHeart, 1000);
             gameLoop();
         }
+
         function clearAllIntervals() {
             clearInterval(timerInterval);
             clearInterval(heartSpawnInterval);
             clearInterval(survivalSpeedInterval);
         }
 
-            // Move hearts
         function update() {
+            updatePlayerPosition();
+
             hearts.forEach((heart, index) => {
                 heart.y += heart.speed * speedMultiplier;
 
-                // Check for collision with player
                 if (
                     heart.x < player.x + player.width &&
                     heart.x + heart.size > player.x &&
@@ -202,38 +223,27 @@
                     score += heart.value;
                 }
 
-                // Remove hearts that fall off screen
                 if (heart.y > canvas.height) {
                     hearts.splice(index, 1);
-                    if (survivalMode) {
-                let speedMultiplier = 1;
-                survivalSpeedInterval = setInterval(() => {
-                    speedMultiplier += 0.5; // Increment multiplier every 10 seconds
-                }, 10000);
-                }, 10000);
-            }, 10000);
-            } else {
-                timerInterval = setInterval(() => {
-                    gameTime -= 1;
-                    if (gameTime <= 0) {
-                        gameOver = true;
-                    }
-                }, 1000);
                     if (survivalMode) gameOver = true;
                 }
             });
         }
+
         function render() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = '#000';
             ctx.font = '20px Arial';
             ctx.fillText(`Score: ${score}`, 10, 30);
-            if (!survivalMode) ctx.fillText(`Time: ${Math.max(gameTime.toFixed(1), 0)}s`, 10, 60);
+            ctx.fillText(`Highest Score: ${highestScore}`, 10, 60); // 显示最高分
+            if (!survivalMode) ctx.fillText(`Time: ${Math.max(gameTime.toFixed(1), 0)}s`, 10, 90);
+
             ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
             hearts.forEach(heart => {
                 ctx.drawImage(heart.image, heart.x, heart.y, heart.size, heart.size);
             });
         }
+
         function gameLoop() {
             if (gameOver) {
                 ctx.fillStyle = '#000';
@@ -243,38 +253,29 @@
                 ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 50);
                 restartButton.style.display = 'block';
                 homeButton.style.display = 'block';
+
+                // Update highest score if current score is greater
+                updateHighestScore(score);
+
                 clearAllIntervals();
                 return;
             }
 
-            heartSpawnInterval = setInterval(spawnHeart, 1000);
-            gameLoop();
             update();
             render();
             requestAnimationFrame(gameLoop);
         }
 
         function restartGame() {
-            score = 0;
-            hearts = [];
-            gameOver = false;
             restartButton.style.display = 'none';
             homeButton.style.display = 'none';
             startGame(survivalMode ? 'survival' : 'timed');
         }
 
         function returnHome() {
-            score = 0;
-            hearts = [];
-            gameOver = false;
-            restartButton.style.display = 'none';
-            homeButton.style.display = 'none';
             clearAllIntervals();
             modeSelection.style.display = 'block';
             canvas.style.display = 'none';
-            clearInterval(timerInterval);
-            clearInterval(heartSpawnInterval);
-            clearInterval(survivalSpeedInterval);
         }
 
         function bindButtonEvents(button, callback) {
@@ -285,7 +286,6 @@
             }, { passive: false });
         }
 
-        // Bind events for buttons
         bindButtonEvents(restartButton, restartGame);
         bindButtonEvents(homeButton, returnHome);
         bindButtonEvents(survivalModeButton, () => startGame('survival'));
