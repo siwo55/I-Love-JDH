@@ -28,6 +28,7 @@
             border: none;
             cursor: pointer;
             border-radius: 5px;
+            z-index: 10;
         }
         #restartButton, #homeButton {
             display: none;
@@ -174,6 +175,8 @@
         function startGame(mode) {
             modeSelection.style.display = 'none';
             canvas.style.display = 'block';
+            restartButton.style.display = 'none';
+            homeButton.style.display = 'none';
             survivalMode = mode === 'survival';
             score = 0;
             hearts = [];
